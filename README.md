@@ -1,0 +1,1 @@
+# WCI-training-Kick-Detection-Resolution
