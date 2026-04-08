@@ -46,6 +46,10 @@
         @keyframes pulsePressure { 0%, 100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 10px #e11d48; } 50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 20px #be123c; } }
         @keyframes bubbleRise { 0% { bottom: -20px; transform: translateX(0px) scale(0.5); opacity: 0; } 20% { opacity: 0.8; } 50% { transform: translateX(15px) scale(1.5); } 80% { opacity: 0.8; transform: translateX(-15px) scale(2.5); } 100% { bottom: 120%; transform: translateX(0px) scale(4); opacity: 0; } }
         
+        /* New Animations for Ballooning vs Kick */
+        @keyframes balloonFlow { 0% { height: 0%; opacity: 1; } 40% { height: 60%; opacity: 0.8; } 100% { height: 60%; opacity: 0; } }
+        @keyframes kickFlow { 0% { height: 0%; opacity: 1; } 100% { height: 100%; opacity: 1; } }
+
         .anim-flow-down { stroke-dasharray: 8 4; animation: fluidFlowDown 0.6s linear infinite; }
         .anim-flow-up { stroke-dasharray: 8 4; animation: fluidFlowUp 0.8s linear infinite; }
         .anim-pulse-red { animation: pulseRed 0.6s ease-in-out infinite; }
@@ -56,6 +60,9 @@
         .anim-pulse-pressure { animation: pulsePressure 1.5s infinite; }
         .anim-bubble-1 { animation: bubbleRise 3s ease-in infinite; }
         .anim-bubble-2 { animation: bubbleRise 4s ease-in infinite 0.5s; }
+        
+        .anim-balloon { animation: balloonFlow 4s ease-out infinite; }
+        .anim-kick { animation: kickFlow 1.5s linear infinite; }
         
         /* Exam Mode Lock */
         body.exam-mode #desktop-sidebar, body.exam-mode #mobile-header, body.exam-mode nav.md\:hidden, body.exam-mode #mobile-menu, body.exam-mode #exam-share-section { display: none !important; }
@@ -241,6 +248,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                         <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><h3 class="font-bold text-slate-800 text-sm mb-4">Pass/Fail Ratio</h3><div class="mini-chart-container w-full"><canvas id="instructorPieChart"></canvas></div></div>
                         <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm"><h3 class="font-bold text-slate-800 text-sm mb-4">Topic Performance</h3><div class="radar-chart-container w-full"><canvas id="topicRadarChart"></canvas></div></div>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
+                        <h3 class="font-bold text-slate-800 text-sm mb-4">Group Vulnerability Gaps</h3>
+                        <div class="chart-container w-full h-[250px]"><canvas id="groupGapsChart"></canvas></div>
                     </div>
 
                     <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
@@ -1026,21 +1038,39 @@
 
                             <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
                                 <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm">
-                                    <h3 class="text-lg font-bold text-amber-900 mb-3 flex items-center gap-2"><span>🕵️‍♂️</span> Masking Factors</h3>
+                                    <h3 class="text-lg font-bold text-amber-900 mb-3 flex items-center gap-2"><span>🕵️‍♂️</span> Masking Factors (False Positives/Negatives)</h3>
                                     <ul class="space-y-3 flex-grow text-sm">
-                                        <li class="flex items-start gap-3 bg-white p-3 rounded-lg border border-amber-100"><span class="text-lg">🔀</span><div><strong class="text-slate-800 block">Mud Transfers</strong><span class="text-xs text-slate-600">Transferring between active/reserve bypasses tracking.</span></div></li>
-                                        <li class="flex items-start gap-3 bg-white p-3 rounded-lg border border-amber-100"><span class="text-lg">⚖️</span><div><strong class="text-slate-800 block">Mud Additions</strong><span class="text-xs text-slate-600">Adding chemicals alters levels, masking gains.</span></div></li>
+                                        <li class="flex items-start gap-3 bg-white p-3 rounded-lg border border-amber-100"><span class="text-lg">🔀</span><div><strong class="text-slate-800 block">Mud Transfers & Additions</strong><span class="text-xs text-slate-600">Transferring mud between active and reserve pits, or aggressively adding chemicals, alters surface volumes and completely obscures real pit gains or losses.</span></div></li>
+                                        <li class="flex items-start gap-3 bg-white p-3 rounded-lg border border-amber-100"><span class="text-lg">🌊</span><div><strong class="text-slate-800 block">Flowline Drain Back</strong><span class="text-xs text-slate-600">When pumps are shut off, mud in the elevated flowline naturally drains back into the active pit. This expected, finite return can trigger a false pit gain alarm.</span></div></li>
+                                        <li class="flex items-start gap-3 bg-white p-3 rounded-lg border border-amber-100"><span class="text-lg">🌡️</span><div><strong class="text-slate-800 block">Thermal Expansion</strong><span class="text-xs text-slate-600">Cold mud pumped downhole heats up upon circulation and expands in the annulus, causing a gradual pit gain that simulates a slow influx.</span></div></li>
+                                        <li class="flex items-start gap-3 bg-white p-3 rounded-lg border border-amber-100"><span class="text-lg">⚖️</span><div><strong class="text-slate-800 block">U-Tubing (Heavy Slugs)</strong><span class="text-xs text-slate-600">Pumping a heavy pill causes the fluid level inside the drill pipe to drop rapidly while pushing fluid up the annulus. If not isolated to the trip tank, this return flow mimics a kick.</span></div></li>
                                     </ul>
                                 </div>
-                                <div class="bg-sky-50 border border-sky-200 rounded-2xl p-6 shadow-sm">
+                                <div class="bg-sky-50 border border-sky-200 rounded-2xl p-6 shadow-sm flex flex-col">
                                     <h3 class="text-lg font-bold text-sky-900 mb-3 flex items-center gap-2"><span>🎈</span> Ballooning vs. True Kick</h3>
-                                    <p class="text-sky-800 text-xs leading-relaxed mb-4"><em>Rule: Ballooning flow is FINITE. Kick flow is CONTINUOUS.</em></p>
-                                    <div class="flex items-center gap-4 bg-white p-4 rounded-xl border border-sky-100 shadow-inner">
-                                        <span class="text-3xl">🎚️</span>
-                                        <div>
-                                            <strong class="text-sky-900 block text-sm">Perform Flow Check</strong>
-                                            <p class="text-xs text-slate-600">Shut off pumps. If the well flows back a small, finite amount and dies, it is ballooning (fractures relaxing). If it continues flowing steadily, it is a true kick.</p>
+                                    <p class="text-sky-800 text-xs leading-relaxed mb-4"><em>Rule: Ballooning flow is FINITE and decelerates. Kick flow is CONTINUOUS and may accelerate.</em></p>
+                                    
+                                    <div class="flex-grow flex gap-4 mb-4">
+                                        <!-- Ballooning Sim -->
+                                        <div class="flex-1 bg-white p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                                            <h4 class="font-bold text-[10px] text-slate-500 uppercase tracking-widest mb-2">Wellbore Ballooning</h4>
+                                            <div class="w-12 h-24 bg-slate-800 rounded-b-full relative border-t-4 border-slate-600 overflow-hidden">
+                                                <div class="absolute bottom-0 w-full bg-amber-500 anim-balloon"></div>
+                                            </div>
+                                            <p class="text-[9px] text-slate-600 mt-3 font-medium">Micro-fractures absorb mud (due to ECD), then bleed it back slowly when pumps stop.</p>
                                         </div>
+                                        <!-- Kick Sim -->
+                                        <div class="flex-1 bg-white p-4 rounded-xl border border-slate-200 flex flex-col items-center justify-center text-center relative overflow-hidden group">
+                                            <h4 class="font-bold text-[10px] text-rose-500 uppercase tracking-widest mb-2">True Kick</h4>
+                                            <div class="w-12 h-24 bg-slate-800 rounded-b-full relative border-t-4 border-slate-600 overflow-hidden">
+                                                <div class="absolute bottom-0 w-full bg-rose-500 anim-kick"></div>
+                                            </div>
+                                            <p class="text-[9px] text-slate-600 mt-3 font-medium">Formation pressure exceeds Hydrostatic. Results in uninterrupted, continuous flow.</p>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white p-3 rounded-lg border border-sky-100 shadow-inner">
+                                        <span class="text-[10px] font-bold text-sky-600 uppercase block mb-1">Bleed-Off Test Verification</span>
+                                        <p class="text-xs text-slate-700">Shut the well in and observe SIDPP. Bleed off a small, specific volume (e.g., 5 bbls). If pressure builds back to the exact same original SIDPP, it's a <strong>true kick</strong>. If pressure bleeds down and stays down, it's <strong>ballooning</strong>.</p>
                                     </div>
                                 </div>
                             </div>
@@ -1049,38 +1079,59 @@
                         <!-- TAB 4: FLOW CHECK GUIDE -->
                         <div id="ref-flow" class="ref-tab-content hidden">
                             <h2 class="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-3"><span class="text-3xl">⏱️</span> Flow Check Guide</h2>
-                            <p class="text-slate-600 text-sm md:text-base leading-relaxed mb-8">A flow check eliminates dynamic variables (ECD and string movement) to reveal if static hydrostatic pressure alone can balance formation pressure.</p>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                                <div class="bg-amber-50 rounded-2xl p-6 border border-amber-200 shadow-sm relative overflow-hidden">
-                                    <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl">⚠️</div>
-                                    <h3 class="text-lg font-bold text-amber-800 mb-4 border-b border-amber-200 pb-2">Trigger Conditions</h3>
-                                    <p class="text-sm text-slate-700 mb-4">Execute immediately upon observing:</p>
-                                    <ul class="space-y-2 text-sm text-slate-700 font-medium">
-                                        <li class="flex items-center gap-2"><span class="text-amber-500">■</span> Drilling Break (sudden ROP increase)</li>
-                                        <li class="flex items-center gap-2"><span class="text-amber-500">■</span> Unexplained changes in pump pressure or SPM</li>
-                                        <li class="flex items-center gap-2"><span class="text-amber-500">■</span> Abnormal torque or drag</li>
+                            <p class="text-slate-600 text-sm md:text-base leading-relaxed mb-8">A flow check eliminates dynamic variables (Equivalent Circulating Density and string movement) to reveal if static hydrostatic pressure alone can balance formation pressure.</p>
+                            
+                            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                                <!-- Preparation -->
+                                <div class="bg-indigo-50 border border-indigo-200 rounded-2xl p-6 shadow-sm flex flex-col">
+                                    <div class="flex items-center gap-3 mb-4 border-b border-indigo-200 pb-3">
+                                        <span class="text-2xl">🔧</span><h3 class="font-bold text-indigo-900">1. Preparation & Alignment</h3>
+                                    </div>
+                                    <ul class="space-y-3 text-sm text-slate-700 flex-grow">
+                                        <li class="flex items-start gap-2"><span class="text-indigo-500 font-bold mt-0.5">1.</span> <span><strong>Isolate the Active Pit:</strong> Stop all mud transfers, chemical additions, and dumping.</span></li>
+                                        <li class="flex items-start gap-2"><span class="text-indigo-500 font-bold mt-0.5">2.</span> <span><strong>Align to Trip Tank:</strong> For accurate measurement, line up the return flow to the trip tank instead of the massive active pit system.</span></li>
+                                        <li class="flex items-start gap-2"><span class="text-indigo-500 font-bold mt-0.5">3.</span> <span><strong>Account for Drain Back:</strong> Wait a few minutes for mud in the elevated flowline to naturally drain back before taking a baseline reading.</span></li>
                                     </ul>
                                 </div>
-                                <div class="bg-sky-50 rounded-2xl p-6 border border-sky-200 shadow-sm relative overflow-hidden">
-                                    <div class="absolute top-0 right-0 p-4 opacity-10 text-6xl">🔍</div>
-                                    <h3 class="text-lg font-bold text-sky-800 mb-4 border-b border-sky-200 pb-2">Execution Procedure (RP-59)</h3>
-                                    <div class="space-y-4 text-sm text-slate-700 font-medium">
-                                        <div>
-                                            <strong class="text-sky-900 block mb-1">While Drilling:</strong>
-                                            <ol class="list-decimal pl-4 space-y-1 text-xs">
-                                                <li>Stop rotation and pick up off bottom to clear tool joints.</li>
-                                                <li>Stop mud pumps.</li>
-                                                <li>Observe well at the bell nipple/trip tank for 10-15 mins.</li>
-                                            </ol>
-                                        </div>
-                                        <div>
-                                            <strong class="text-sky-900 block mb-1">While Tripping:</strong>
-                                            <ol class="list-decimal pl-4 space-y-1 text-xs">
-                                                <li>Set slips to secure the string.</li>
-                                                <li>Install Full Opening Safety Valve (FOSV) in open position, then close it.</li>
-                                                <li>Observe trip tank or annulus for flow.</li>
-                                            </ol>
-                                        </div>
+
+                                <!-- Execution: Drilling -->
+                                <div class="bg-sky-50 border border-sky-200 rounded-2xl p-6 shadow-sm flex flex-col">
+                                    <div class="flex items-center gap-3 mb-4 border-b border-sky-200 pb-3">
+                                        <span class="text-2xl">🕳️</span><h3 class="font-bold text-sky-900">2. Execution (Drilling)</h3>
+                                    </div>
+                                    <ul class="space-y-3 text-sm text-slate-700 flex-grow">
+                                        <li class="flex items-start gap-2"><span class="text-sky-500 font-bold mt-0.5">1.</span> <span><strong>Stop Rotary & Space Out:</strong> Halt rotation. Pick up off bottom to ensure a tool joint is not across the BOP rams.</span></li>
+                                        <li class="flex items-start gap-2"><span class="text-sky-500 font-bold mt-0.5">2.</span> <span><strong>Stop Mud Pumps:</strong> Shut down pumps gradually. This removes ECD, relying solely on static Hydrostatic Pressure.</span></li>
+                                        <li class="flex items-start gap-2"><span class="text-sky-500 font-bold mt-0.5">3.</span> <span><strong>Observe:</strong> Monitor the trip tank or bell nipple strictly for <strong class="text-sky-800">10 to 15 minutes</strong>. Do not rush this step.</span></li>
+                                    </ul>
+                                </div>
+
+                                <!-- Execution: Tripping -->
+                                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6 shadow-sm flex flex-col">
+                                    <div class="flex items-center gap-3 mb-4 border-b border-amber-200 pb-3">
+                                        <span class="text-2xl">🏗️</span><h3 class="font-bold text-amber-900">2. Execution (Tripping)</h3>
+                                    </div>
+                                    <ul class="space-y-3 text-sm text-slate-700 flex-grow">
+                                        <li class="flex items-start gap-2"><span class="text-amber-500 font-bold mt-0.5">1.</span> <span><strong>Set Slips:</strong> Immediately secure the drill string in the rotary table.</span></li>
+                                        <li class="flex items-start gap-2"><span class="text-amber-500 font-bold mt-0.5">2.</span> <span><strong>Prepare FOSV:</strong> Ensure the Full Opening Safety Valve (TIW) is available and in the <em>OPEN</em> position.</span></li>
+                                        <li class="flex items-start gap-2"><span class="text-amber-500 font-bold mt-0.5">3.</span> <span><strong>Observe:</strong> Watch the annulus or trip tank. If the well begins to flow actively, immediately stab the FOSV, close it, and initiate Hard Shut-In.</span></li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Interpretation Matrix -->
+                            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                                <h3 class="font-bold text-slate-900 text-lg mb-4 border-b pb-2">3. Interpretation & Decision Matrix</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="bg-rose-50 p-5 rounded-xl border border-rose-200">
+                                        <div class="flex items-center gap-2 mb-2"><span class="text-rose-600 animate-pulse text-xl">🚨</span> <strong class="text-rose-800 text-lg">Result: POSITIVE (Flowing)</strong></div>
+                                        <p class="text-sm text-slate-700 mb-4">Continuous flow is observed out of the wellbore after the flowline has drained back.</p>
+                                        <div class="bg-rose-600 text-white font-bold text-center py-2 rounded shadow-inner uppercase tracking-wider text-sm">Action: Immediate Shut-In</div>
+                                    </div>
+                                    <div class="bg-emerald-50 p-5 rounded-xl border border-emerald-200">
+                                        <div class="flex items-center gap-2 mb-2"><span class="text-emerald-600 text-xl">✅</span> <strong class="text-emerald-800 text-lg">Result: NEGATIVE (Static)</strong></div>
+                                        <p class="text-sm text-slate-700 mb-4">Fluid level remains completely static after initial drain back. Hydrostatic pressure is sufficient.</p>
+                                        <div class="bg-emerald-600 text-white font-bold text-center py-2 rounded shadow-inner uppercase tracking-wider text-sm">Action: Resume Operations (Monitor)</div>
                                     </div>
                                 </div>
                             </div>
@@ -1356,6 +1407,9 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, doc, updateDoc, deleteDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- CONTENT PROTECTION ---
+        document.addEventListener('contextmenu', event => event.preventDefault());
 
         // Global State & Helpers
         const setTxt = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
@@ -2041,4 +2095,3 @@
     </script>
 </body>
 </html>
-
